@@ -1,0 +1,16 @@
+[project]
+name = "pitonkit"
+version = "1.1.0"
+description = "Chat backend library for Piton 1.1 in Forge Code"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "g4f>=0.3.0",
+]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Forge Code</title>
+    <script>
+      window.open = function () {
+        return null;
+      };
+      document.addEventListener(
+        "click",
+        (event) => {
+          const link = event.target.closest("a[href]");
+          if (!link) {
+            return;
+          }
+          const href = String(link.getAttribute("href") || "").trim().toLowerCase();
+          if (href.startsWith("about:") || link.target === "_blank") {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+        },
+        true,
+      );
+    </script>
+    <link rel="stylesheet" href="workbench.css?v=34" />
+    <link rel="stylesheet" href="xterm/xterm.css" />
+    <style>
+      #splash {
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #1e1e1e;
+        color: #cccccc;
+        font-family: "Segoe UI", Tahoma, sans-serif;
+        transition: opacity 0.35s ease, visibility 0.35s ease;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      #splash.splash-hide {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+      .splash-inner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 18px;
+        transform: translateY(-4vh);
+      }
+      .splash-mark {
+        width: 96px;
+        height: 96px;
+        object-fit: contain;
+        border-radius: 16px;
+        filter: drop-shadow(0 8px 24px rgba(0, 122, 204, 0.28));
+      }
+      .splash-title {
+        font-size: 22px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: #f3f3f3;
+      }
+      .splash-sub {
+        margin-top: -8px;
+        font-size: 12px;
+        color: #858585;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="splash" aria-hidden="false">
+      <div class="splash-inner">
+        <img class="splash-mark" src="assets/forge-code-mark.png" alt="" width="96" height="96" />
+        <div class="splash-title">Forge Code</div>
+        <div class="splash-sub">загрузка</div>
+      </div>
+    </div>
+    <div id="workbench">
+      <header class="titlebar">
+        <div class="titlebar-left">
+          <img class="app-mark" src="assets/forge-code-mark.png" alt="" width="24" height="24" title="Forge Code" />
+          <nav class="menubar">
+            <div class="menu-root">
+              <button type="button" id="file-menu-btn">Файл</button>
+              <div class="menu" id="file-menu" hidden>
+                <button type="button" data-action="new-untitled">Новый текстовый файл<span>Ctrl+N</span></button>
+                <button type="button" data-action="new-file">Новый файл...</button>
+                <button type="button" data-action="new-window">Новое окно<span>Ctrl+Shift+N</span></button>
+                <div class="menu-sep"></div>
+                <button type="button" data-action="open-file">Открыть файл...<span>Ctrl+O</span></button>
+                <button type="button" data-action="open-folder">Открыть папку...</button>
+                <div class="menu-label">Недавние папки</div>
+                <div id="recent-list"></div>
+                <div class="menu-label">Недавние файлы</div>
+                <div id="recent-files-list"></div>
+                <div class="menu-sep"></div>
+                <button type="button" data-action="save">Сохранить<span>Ctrl+S</span></button>
+                <button type="button" data-action="save-as">Сохранить как...<span>Ctrl+Shift+S</span></button>
+                <button type="button" data-action="save-all">Сохранить все</button>
+                <div class="menu-sep"></div>
+                <button type="button" data-action="toggle-autosave" id="autosave-item">Автосохранение</button>
+                <div class="menu-sep"></div>
+                <button type="button" data-action="revert">Вернуть файл</button>
+                <button type="button" data-action="close-editor">Закрыть редактор<span>Ctrl+F4</span></button>
+                <button type="button" data-action="close-folder">Закрыть папку</button>
+                <div class="menu-sep"></div>
+                <button type="button" data-action="open-settings">Параметры</button>
+                <div class="menu-sep"></div>
+                <button type="button" data-action="quit">Выход</button>
+              </div>
+            </div>
+            <div class="menu-root">
+              <button type="button" id="edit-menu-btn">Правка</button>
+              <div class="menu" id="edit-menu" hidden>
+                <button type="button" data-action="edit-undo">Отменить<span>Ctrl+Z</span></button>
+                <button type="button" data-action="edit-redo">Повторить<span>Ctrl+Y</span></button>
+                <div class="menu-sep"></div>
+                <button type="button" data-action="edit-cut">Вырезать<span>Ctrl+X</span></button>
+                <button type="button" data-action="edit-copy">Копировать<span>Ctrl+C</span></button>
+                <button type="button" data-action="edit-paste">Вставить<span>Ctrl+V</span></button>
+                <div class="menu-sep"></div>
+                <button type="button" data-action="find-in-editor">Найти<span>Ctrl+F</span></button>
+                <button type="button" data-action="replace-in-editor">Заменить<span>Ctrl+H</span></button>
+                <button type="button" data-action="quick-open">Быстрое открытие<span>Ctrl+P</span></button>
+                <button type="button" data-action="project-search">Поиск по проекту<span>Ctrl+Shift+F</span></button>
+              </div>
+            </div>
+            <div class="menu-root">
+              <button type="button" id="terminal-menu-btn">Terminal</button>
+              <div class="menu" id="terminal-menu" hidden>
+                <button type="button" data-action="new-terminal">Новый терминал<span>Ctrl+Shift+`</span></button>
+                <button type="button" data-action="show-terminal">Показать терминал<span>Ctrl+`</span></button>
+                <div class="menu-sep"></div>
+                <button type="button" data-action="close-terminal">Закрыть терминал</button>
+              </div>
+            </div>
+            <button type="button" data-action="save">Сохранить</button>
+            <button type="button" data-action="run" class="hidden">Запуск</button>
+            <button type="button" data-action="stop-run" class="hidden">Стоп</button>
+          </nav>
+        </div>
+        <div class="titlebar-center" id="window-title"></div>
+        <div class="titlebar-right">
+          <button type="button" class="icon-btn" data-action="open-folder" title="Открыть папку">Открыть папку</button>
+          <button type="button" class="icon-btn accent hidden" data-action="run" title="Запустить файл (F5)">▶ Запуск</button>
+          <button type="button" class="icon-btn stop hidden" data-action="stop-run" title="Остановить (Shift+F5)">■ Стоп</button>
+          <div class="win-controls">
+            <button type="button" class="win-btn win-min" data-action="window-minimize" title="Свернуть" aria-label="Свернуть">
+              <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 5h8" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+            </button>
+            <button type="button" class="win-btn win-max" data-action="window-maximize" title="Развернуть" aria-label="Развернуть">
+              <svg viewBox="0 0 10 10" aria-hidden="true"><rect x="1.5" y="1.5" width="7" height="7" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+            </button>
+            <button type="button" class="win-btn win-close" data-action="window-close" title="Закрыть" aria-label="Закрыть">
+              <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/></svg>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div class="shell">
+        <aside class="activitybar" aria-label="Панель действий">
+          <button type="button" class="activity active" data-action="focus-explorer" title="Проводник">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 5h7l2 2h7v12H4V5zm2 4v8h12V9H6z"/></svg>
+          </button>
+          <button type="button" class="activity" data-action="project-search" title="Поиск по проекту (Ctrl+Shift+F)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10 4a6 6 0 0 1 4.47 10.11l4.21 4.21-1.42 1.42-4.21-4.21A6 6 0 1 1 10 4zm0 2a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"/></svg>
+          </button>
+          <button type="button" class="activity" data-action="quick-open" title="Быстрое открытие (Ctrl+P)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8.6 16.6 4 12l4.6-4.6L10 8.8 6.8 12 10 15.2l-1.4 1.4zm6.8 0L14 15.2 17.2 12 14 8.8l1.4-1.4L20 12l-4.6 4.6z"/></svg>
+          </button>
+          <button type="button" class="activity" data-action="command-palette" title="Палитра команд (F1)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 6h16v2H4V6zm0 5h10v2H4v-2zm0 5h16v2H4v-2z"/></svg>
+          </button>
+        </aside>
+
+        <aside class="sidebar" id="sidebar">
+          <div class="sidebar-header">
+            <span>ПРОВОДНИК</span>
+            <div class="sidebar-actions hidden">
+              <button type="button" data-action="new-file" title="Новый файл">＋</button>
+              <button type="button" data-action="new-folder" title="Новая папка">▣</button>
+              <button type="button" data-action="refresh-tree" title="Обновить">↻</button>
+            </div>
+          </div>
+          <div class="sidebar-workspace" id="workspace-name">Нет открытой папки</div>
+          <div class="tree" id="file-tree"></div>
+        </aside>
+        <div class="sash" id="sash-side" data-sash="side"></div>
+
+        <section class="editor-col">
+          <div class="tabs" id="tabs"></div>
+          <div class="editor-host" id="editor-host">
+            <div id="monaco"></div>
+            <div class="welcome" id="welcome">
+              <h1>Forge Code</h1>
+              <button type="button" class="primary" data-action="open-folder">Открыть папку</button>
+              <div class="hints">
+                <div><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> Piton 1.1</div>
+                <div><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>I</kbd> анализ кода</div>
+                <div><kbd>Ctrl</kbd>+<kbd>P</kbd> быстрое открытие файла</div>
+                <div><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd> поиск по проекту</div>
+                <div><kbd>Ctrl</kbd>+<kbd>F</kbd> поиск в файле</div>
+                <div><kbd>Ctrl</kbd>+<kbd>O</kbd> открыть файл</div>
+                <div><kbd>Ctrl</kbd>+<kbd>S</kbd> сохранить</div>
+                <div><kbd>F5</kbd> запустить Python · <kbd>Shift</kbd>+<kbd>F5</kbd> остановить</div>
+                <div><kbd>Ctrl</kbd>+<kbd>`</kbd> панель снизу · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>`</kbd> новый терминал</div>
+              </div>
+            </div>
+          </div>
+          <div class="sash horizontal" id="sash-panel" data-sash="panel"></div>
+          <div class="panel" id="panel">
+            <div class="panel-tabs">
+              <button type="button" class="panel-tab active" data-panel="problems">Проблемы <span id="problem-count">0</span></button>
+              <button type="button" class="panel-tab" data-panel="terminal">Терминал</button>
+              <div class="panel-actions hidden" id="terminal-panel-actions">
+                <button type="button" class="panel-action" id="explain-error-btn" data-action="explain-error" title="Объяснить ошибку (Piton)">?</button>
+                <button type="button" class="panel-action" id="kill-terminal-btn" data-action="close-terminal" title="Закрыть терминал" disabled>
+                  <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M10 3h3.5a.5.5 0 0 1 0 1H13v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4H2.5a.5.5 0 0 1 0-1H6V2.5A1.5 1.5 0 0 1 7.5 1h1A1.5 1.5 0 0 1 10 2.5V3zm-7 1v9h10V4H3zm2.5 2a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-1 0v-5a.5.5 0 0 1 .5-.5zm3 0a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-1 0v-5a.5.5 0 0 1 .5-.5zM7.5 2a.5.5 0 0 0-.5.5V3h2v-.5a.5.5 0 0 0-.5-.5h-1z"/></svg>
+                </button>
+              </div>
+              <button type="button" class="panel-close" data-action="toggle-panel" title="Скрыть панель">×</button>
+            </div>
+            <div class="panel-body" id="problems-view"></div>
+            <div class="panel-body terminal hidden" id="terminal-view">
+              <div id="terminal-empty" class="terminal-empty hidden">
+                Нет терминала. Меню <b>Terminal</b> → <b>Новый терминал</b> или <kbd>Ctrl+Shift+`</kbd>
+              </div>
+              <div id="terminal-hosts"></div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <footer class="statusbar">
+        <div id="status-left">Готово</div>
+        <div id="status-right">Python</div>
+      </footer>
+    </div>
+
+    <div id="overlay" class="overlay hidden">
+      <div class="palette" role="dialog">
+        <div class="palette-title" id="palette-title">Команды</div>
+        <input id="palette-input" autocomplete="off" spellcheck="false" />
+        <div id="palette-list"></div>
+      </div>
+    </div>
+
+    <div id="ask-overlay" class="overlay hidden">
+      <div class="settings-card ask-card" role="dialog" aria-modal="true">
+        <h2 id="ask-title">Вопрос</h2>
+        <p id="ask-message" class="ask-message hidden"></p>
+        <label id="ask-field-wrap">
+          <input id="ask-input" spellcheck="false" />
+        </label>
+        <div class="settings-actions">
+          <button type="button" class="primary" id="ask-ok">OK</button>
+          <button type="button" id="ask-cancel">Отмена</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="settings-overlay" class="overlay hidden">
+      <div class="settings-card">
+        <h2>Параметры</h2>
+        <label>Шрифт редактора
+          <input id="set-font" spellcheck="false" />
+        </label>
+        <label>Размер шрифта
+          <input id="set-size" type="number" min="10" max="32" />
+        </label>
+        <label>Тема
+          <select id="set-theme">
+            <option value="dark">Тёмная</option>
+            <option value="light">Светлая</option>
+            <option value="hc">Контрастная</option>
+          </select>
+        </label>
+        <label>Терминал
+          <select id="set-shell">
+            <option value="powershell">PowerShell</option>
+            <option value="pwsh">PowerShell 7</option>
+            <option value="cmd">Command Prompt</option>
+          </select>
+        </label>
+        <label>Аргументы F5
+          <input id="set-run-args" spellcheck="false" placeholder="например --verbose" />
+        </label>
+        <div class="settings-actions">
+          <button type="button" class="primary" data-action="save-settings">Сохранить</button>
+          <button type="button" data-action="close-settings">Закрыть</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="piton-overlay" class="overlay hidden">
+      <div class="piton-card" role="dialog" aria-labelledby="piton-title">
+        <header class="piton-header">
+          <div class="piton-title-wrap">
+            <h2 id="piton-title">Piton 1.1</h2>
+            <div id="piton-route" class="piton-route" hidden></div>
+          </div>
+          <button type="button" class="piton-close" data-action="close-piton" title="Закрыть">×</button>
+        </header>
+        <div id="piton-messages" class="piton-messages"></div>
+        <form id="piton-form" class="piton-form">
+          <textarea id="piton-input" rows="3" placeholder="Спроси что угодно…" spellcheck="false"></textarea>
+          <div class="piton-actions">
+            <div class="piton-actions-left">
+              <button type="button" data-action="analyze-code" title="Проанализировать открытый файл или выделение">Анализ кода</button>
+              <button type="button" id="piton-retry" class="piton-retry hidden" data-action="retry-piton" title="Повторить последний запрос">Ещё раз</button>
+            </div>
+            <div class="piton-actions-right">
+              <button type="button" data-action="clear-piton">Очистить</button>
+              <button type="button" class="piton-cancel hidden" id="piton-cancel" data-action="cancel-piton">Отмена</button>
+              <button type="submit" class="primary" id="piton-send">Отправить</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+    <script src="xterm/xterm.js"></script>
+    <script src="xterm/addon-fit.js"></script>
+    <script src="workbench.js?v=33"></script>
+  </body>
+</html>
